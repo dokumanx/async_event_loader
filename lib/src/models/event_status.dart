@@ -9,6 +9,7 @@ class EventStatus with EquatableMixin {
     required this.total,
     required this.completed,
     required this.label,
+    this.retryCount = 0,
   }) {
     progress = completed / total;
   }
@@ -19,6 +20,7 @@ class EventStatus with EquatableMixin {
         total = 0,
         completed = 0,
         progress = 0,
+        retryCount = 0,
         label = '';
 
   final AsyncStatus status;
@@ -27,6 +29,7 @@ class EventStatus with EquatableMixin {
   final int completed;
   late final double progress;
   final String label;
+  final int retryCount;
 
   @override
   List<Object?> get props =>
@@ -38,6 +41,7 @@ class EventStatus with EquatableMixin {
     int? total,
     int? completed,
     String? label,
+    int? retryCount,
   }) {
     return EventStatus(
       status: status ?? this.status,
@@ -45,6 +49,7 @@ class EventStatus with EquatableMixin {
       total: total ?? this.total,
       completed: completed ?? this.completed,
       label: label ?? this.label,
+      retryCount: retryCount ?? this.retryCount,
     );
   }
 
@@ -53,6 +58,7 @@ class EventStatus with EquatableMixin {
     return '''
         Completed Events: $completed,
         Progress: %${(progress * 100).toStringAsFixed(0)},
+        Retry Count: $retryCount,
         Event Status: $status,
         Current Event Order: ${current.order},
     ''';

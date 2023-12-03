@@ -61,10 +61,11 @@ class AsyncEventLoaderController {
       } else {
         errorFallback?.call();
       }
+      _resetRetryCount();
     } else {
       _retryCount++;
       _markAsRetrying();
-      _eventController.add(currentEvent);
+      _retryCurrent();
     }
   }
 
@@ -156,6 +157,7 @@ class AsyncEventLoaderController {
     _emitStatus(
       currentEventStatus.copyWith(
         status: AsyncStatus.retrying,
+        retryCount: _retryCount,
       ),
     );
   }
@@ -170,7 +172,7 @@ class AsyncEventLoaderController {
     );
   }
 
-  void retryCurrent() {
+  void _retryCurrent() {
     if (_isDisposed) return; // Check if the controller is disposed
 
     _eventController.add(currentEvent);
@@ -179,8 +181,8 @@ class AsyncEventLoaderController {
   void _emitStatus(EventStatus eventStatus) {
     if (_isDisposed) return; // Check if the controller is disposed
 
-    currentEventStatus = eventStatus;
-    _eventStatusController.add(eventStatus);
+    currentEventStatus = eventStatus.copyWith(retryCount: _retryCount);
+    _eventStatusController.add(currentEventStatus);
   }
 
   bool get isCompleted => currentEventStatus.status.isCompleted;
@@ -239,8 +241,7 @@ class AsyncEventLoaderController {
 
   final _eventStatusController =
       BehaviorSubject<EventStatus>.seeded(EventStatus.initial());
-  final _eventController =
-      BehaviorSubject<AsyncEvent>();
+  final _eventController = BehaviorSubject<AsyncEvent>();
   EventStatus currentEventStatus = EventStatus.initial();
 
   /// Should be disposed after use
@@ -251,7 +252,7 @@ class AsyncEventLoaderController {
         }
 
         return previous.status == next.status &&
-            previous.completed == next.completed ;
+            previous.completed == next.completed;
       });
 
   void dispose() {
