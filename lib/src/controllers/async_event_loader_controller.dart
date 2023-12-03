@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:async_event_loader/src/enums/async_status.dart';
 import 'package:async_event_loader/src/models/async_event.dart';
 import 'package:async_event_loader/src/models/event_status.dart';
+import 'package:rxdart/rxdart.dart';
 
 class AsyncEventLoaderController {
   AsyncEventLoaderController({
@@ -11,7 +12,18 @@ class AsyncEventLoaderController {
     this.skipOnError = false,
   }) {
     _eventSubscription = _eventController.stream.listen(_listenToEvents);
+
     _emitStatus(currentEventStatus.copyWith(total: events.length));
+
+    _eventController
+      ..doOnPause(() {
+        _markAsPaused();
+        _eventSubscription.pause();
+      })
+      ..doOnResume(() {
+        _markAsProcessing();
+        _eventSubscription.resume();
+      });
   }
 
   late final StreamSubscription<AsyncEvent> _eventSubscription;
@@ -26,6 +38,7 @@ class AsyncEventLoaderController {
 
   void run() {
     _markAsProcessing();
+
     _eventController.add(currentEvent);
   }
 
@@ -87,7 +100,7 @@ class AsyncEventLoaderController {
       );
       _eventController.add(currentEvent);
     } else {
-      if(completed == total) {
+      if (completed == total) {
         _markAsCompleted(completed);
       }
     }
@@ -170,28 +183,30 @@ class AsyncEventLoaderController {
     _eventStatusController.add(eventStatus);
   }
 
-  bool get isCompleted => currentEventStatus.status == AsyncStatus.completed;
+  bool get isCompleted => currentEventStatus.status.isCompleted;
 
-  bool get isProcessing => currentEventStatus.status == AsyncStatus.processing;
+  bool get isProcessing => currentEventStatus.status.isProcessing;
 
-  bool get isPaused => currentEventStatus.status == AsyncStatus.paused;
+  bool get isPaused => currentEventStatus.status.isPaused;
 
-  bool get isCanceled => currentEventStatus.status == AsyncStatus.canceled;
+  bool get isCanceled => currentEventStatus.status.isCanceled;
 
-  bool get isError => currentEventStatus.status == AsyncStatus.error;
+  bool get isError => currentEventStatus.status.isError;
 
-  bool get isRetrying => currentEventStatus.status == AsyncStatus.retrying;
+  bool get isRetrying => currentEventStatus.status.isRetrying;
 
-  bool get isInitial => currentEventStatus.status == AsyncStatus.initial;
+  bool get isInitial => currentEventStatus.status.isInitial;
 
-  bool get shouldDispose => isCompleted || isCanceled || isError;
+  bool get shouldDispose => currentEventStatus.status.shouldDispose;
+
+  bool get canNext => currentEventStatus.status.canNext;
 
   bool get exceededRetryLimit => _retryCount >= retryLimit;
 
   Future<void> _listenToEvents(AsyncEvent event) async {
     if (shouldDispose) {
       dispose();
-    } else {
+    } else if (!isPaused) {
       try {
         if (!isRetrying) {
           _markAsProcessing();
@@ -199,7 +214,7 @@ class AsyncEventLoaderController {
         await event.action();
         event.onSuccess?.call();
 
-        if (!isError) {
+        if (canNext) {
           _next();
         }
       } catch (e) {
@@ -222,12 +237,22 @@ class AsyncEventLoaderController {
   /// to the next event
   final bool skipOnError;
 
-  final _eventStatusController = StreamController<EventStatus>.broadcast();
-  final _eventController = StreamController<AsyncEvent>.broadcast();
+  final _eventStatusController =
+      BehaviorSubject<EventStatus>.seeded(EventStatus.initial());
+  final _eventController =
+      BehaviorSubject<AsyncEvent>();
   EventStatus currentEventStatus = EventStatus.initial();
 
   /// Should be disposed after use
-  Stream<EventStatus> get eventStatusStream => _eventStatusController.stream;
+  Stream<EventStatus> get eventStatusStream =>
+      _eventStatusController.stream.distinct((previous, next) {
+        if (next.status == AsyncStatus.retrying) {
+          return false;
+        }
+
+        return previous.status == next.status &&
+            previous.completed == next.completed ;
+      });
 
   void dispose() {
     _isDisposed = true; // Set the dispose flag

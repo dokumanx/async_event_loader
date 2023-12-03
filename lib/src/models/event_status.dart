@@ -47,4 +47,14 @@ class EventStatus with EquatableMixin {
       label: label ?? this.label,
     );
   }
+
+  @override
+  String toString() {
+    return '''
+        Completed Events: $completed,
+        Progress: %${(progress * 100).toStringAsFixed(0)},
+        Event Status: $status,
+        Current Event Order: ${current.order},
+    ''';
+  }
 }
