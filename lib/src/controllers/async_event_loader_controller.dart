@@ -1,11 +1,21 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:async_event_loader/src/enums/async_status.dart';
 import 'package:async_event_loader/src/models/async_event.dart';
 import 'package:async_event_loader/src/models/event_status.dart';
 import 'package:rxdart/rxdart.dart';
 
+/// Represents a controller for managing and controlling async events.
 class AsyncEventLoaderController {
+  /// Creates a new instance of [AsyncEventLoaderController].
+  ///
+  /// [events] is a required list of AsyncEvent that the controller will
+  /// process.
+  /// [retryLimit] is the number of times the controller will retry an event
+  /// before failing. Default is 3.
+  /// [skipOnError] determines whether the controller should continue to the
+  /// next event when an error occurs. Default is false.
   AsyncEventLoaderController({
     required this.events,
     this.retryLimit = 3,
@@ -35,26 +45,35 @@ class AsyncEventLoaderController {
 
   int _retryCount = 0;
 
+  /// Returns the current retry count.
   int get retryCount => _retryCount;
 
-  bool _isDisposed = false; // Flag to track if the controller is disposed
+  /// Flag to track if the controller is disposed
+  bool _isDisposed = false;
 
+  /// Starts the processing of events.
   void run() {
     _markAsProcessing();
 
     _eventController.add(currentEvent);
   }
 
+  /// Pauses the processing of events.
   void pause() {
     _markAsPaused();
     _cancellable?.cancel();
   }
 
+  /// Retries the current event.
+  ///
+  /// [errorFallback] is a function that will be called when the retry limit is
+  /// exceeded.
   void _retry(void Function()? errorFallback) {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     if (exceededRetryLimit) {
       _markEventFail();
+      _resetRetryCount();
 
       if (skipOnError) {
         if (isLastEvent) {
@@ -65,7 +84,6 @@ class AsyncEventLoaderController {
       } else {
         errorFallback?.call();
       }
-      _resetRetryCount();
     } else {
       _retryCount++;
       _markAsRetrying();
@@ -73,15 +91,18 @@ class AsyncEventLoaderController {
     }
   }
 
+  /// Resets the controller to its initial state.
   void reset() {
     _resetRetryCount();
     _emitStatus(EventStatus.initial());
   }
 
+  /// Resets the retry count to 0.
   void _resetRetryCount() {
     _retryCount = 0;
   }
 
+  /// Moves to the next event in the list.
   void _next() {
     if (_isDisposed || isPaused) return;
 
@@ -111,8 +132,9 @@ class AsyncEventLoaderController {
     }
   }
 
+  /// Marks the current event as failed.
   void _markEventFail() {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _emitStatus(
       currentEventStatus.copyWith(
@@ -121,8 +143,9 @@ class AsyncEventLoaderController {
     );
   }
 
+  /// Marks the current event as completed.
   void _markAsCompleted([int? completed]) {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _emitStatus(
       currentEventStatus.copyWith(
@@ -132,21 +155,13 @@ class AsyncEventLoaderController {
     );
   }
 
-  void _markAsError() {
-    if (_isDisposed) return; // Check if the controller is disposed
-
-    _emitStatus(
-      currentEventStatus.copyWith(
-        status: AsyncStatus.error,
-      ),
-    );
-  }
-
+  /// Checks if the current event is the last event in the list.
   bool get isLastEvent =>
       currentEventStatus.completed == currentEventStatus.total;
 
+  /// Marks the current event as processing.
   void _markAsProcessing() {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _emitStatus(
       currentEventStatus.copyWith(
@@ -155,8 +170,9 @@ class AsyncEventLoaderController {
     );
   }
 
+  /// Marks the current event as retrying.
   void _markAsRetrying() {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _emitStatus(
       currentEventStatus.copyWith(
@@ -166,8 +182,9 @@ class AsyncEventLoaderController {
     );
   }
 
+  /// Marks the current event as paused.
   void _markAsPaused() {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _emitStatus(
       currentEventStatus.copyWith(
@@ -176,12 +193,16 @@ class AsyncEventLoaderController {
     );
   }
 
+  /// Retries the current event.
   void _retryCurrent() {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     _eventController.add(currentEvent);
   }
 
+  /// Emits the current event status.
+  ///
+  /// [eventStatus] is the status of the current event.
   void _emitStatus(EventStatus eventStatus) {
     if (_isDisposed) return;
 
