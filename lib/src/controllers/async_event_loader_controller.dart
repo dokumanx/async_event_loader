@@ -28,6 +28,9 @@ class AsyncEventLoaderController {
 
   late final StreamSubscription<AsyncEvent> _eventSubscription;
 
+  CancelableOperation<dynamic>? _cancellable;
+
+  /// Returns the current event that the controller is processing.
   AsyncEvent get currentEvent => events[currentEventStatus.completed];
 
   int _retryCount = 0;
@@ -44,6 +47,7 @@ class AsyncEventLoaderController {
 
   void pause() {
     _markAsPaused();
+    _cancellable?.cancel();
   }
 
   void _retry(void Function()? errorFallback) {
@@ -179,7 +183,7 @@ class AsyncEventLoaderController {
   }
 
   void _emitStatus(EventStatus eventStatus) {
-    if (_isDisposed) return; // Check if the controller is disposed
+    if (_isDisposed) return;
 
     currentEventStatus = eventStatus.copyWith(retryCount: _retryCount);
     _eventStatusController.add(currentEventStatus);
@@ -213,9 +217,10 @@ class AsyncEventLoaderController {
         if (!isRetrying) {
           _markAsProcessing();
         }
-        await event.action();
-        event.onSuccess?.call();
+        _cancellable = CancelableOperation<dynamic>.fromFuture(event.action());
+        await _cancellable?.value;
 
+        event.onSuccess?.call();
         if (canNext) {
           _next();
         }
