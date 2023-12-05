@@ -1,4 +1,3 @@
-import 'package:async_event_loader/src/enums/async_status.dart';
 import 'package:equatable/equatable.dart';
 
 class AsyncEvent with EquatableMixin {
@@ -9,6 +8,7 @@ class AsyncEvent with EquatableMixin {
     this.onError,
     this.onCancel,
     this.order,
+    this.label,
   });
 
   final Future<dynamic> Function() action;
@@ -17,6 +17,7 @@ class AsyncEvent with EquatableMixin {
   final void Function(dynamic error)? onError;
   final void Function()? onCancel;
   final int? order;
+  final String? label;
 
   AsyncEvent copyWith({
     Future<dynamic> Function()? action,
@@ -25,6 +26,7 @@ class AsyncEvent with EquatableMixin {
     void Function(dynamic error)? onError,
     void Function()? onCancel,
     int? order,
+    String? label,
   }) {
     return AsyncEvent(
       action: action ?? this.action,
@@ -33,6 +35,7 @@ class AsyncEvent with EquatableMixin {
       onError: onError ?? this.onError,
       onCancel: onCancel ?? this.onCancel,
       order: order ?? this.order,
+      label: label ?? this.label,
     );
   }
 
