@@ -259,7 +259,7 @@ class AsyncEventLoaderController {
   /// The number of times the controller will retry an event before failing
   final int retryLimit;
 
-  /// If false, the controller will be disposed after the last failed event
+  /// If false, the controller will be disposed after the first failed event
   ///
   /// If true, error status will be emitted and the controller will continue
   /// to the next event
@@ -267,10 +267,10 @@ class AsyncEventLoaderController {
 
   final _eventStatusController =
       BehaviorSubject<EventStatus>.seeded(EventStatus.initial());
+
   final _eventController = BehaviorSubject<AsyncEvent>();
   EventStatus currentEventStatus = EventStatus.initial();
 
-  /// Should be disposed after use
   Stream<EventStatus> get eventStatusStream =>
       _eventStatusController.stream.distinct((previous, next) {
         if (next.status == AsyncStatus.retrying) {
