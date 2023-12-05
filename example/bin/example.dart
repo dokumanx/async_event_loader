@@ -14,17 +14,17 @@ void main(List<String> arguments) async {
     AsyncEvent(
       order: 2,
       action: () async {
-        print('########  2 processing');
-        throw Exception('error');
+        await Future.delayed(Duration(seconds: 3));
+        print('########  2 Process');
       },
       onSuccess: () {
-        print('########  2 success');
+        print('########  2 Successfully processed');
       },
     ),
     AsyncEvent(
       order: 3,
       action: () async {
-        print('########  3 processing');
+        throw Exception('error');
       },
       onSuccess: () {
         print('########  3 success');
