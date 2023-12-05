@@ -3,14 +3,8 @@ description: Dart package to handle async events.
 homepage: https://github.com/dokumanx/async_event_loader
 repository: https://github.com/dokumanx/async_event_loader
 issue_tracker: https://github.com/dokumanx/async_event_loader/issues
-version: 0.0.1
-platforms:
-  android:
-  ios:
-  linux:
-  macos:
-  web:
-  windows:
+version: 0.0.1+1
+
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
